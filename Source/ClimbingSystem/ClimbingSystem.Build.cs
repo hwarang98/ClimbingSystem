@@ -25,6 +25,7 @@ public class ClimbingSystem : ModuleRules
 
 		PublicIncludePaths.AddRange(new string[] {
 			"ClimbingSystem",
+			"ClimbingSystem/Public",
 			"ClimbingSystem/Variant_Platforming",
 			"ClimbingSystem/Variant_Platforming/Animation",
 			"ClimbingSystem/Variant_Combat",

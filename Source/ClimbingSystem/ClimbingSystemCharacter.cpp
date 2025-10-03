@@ -4,7 +4,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CustomMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
@@ -13,7 +13,8 @@
 #include "ClimbingSystem.h"
 #include "DebugHelper.h"
 
-AClimbingSystemCharacter::AClimbingSystemCharacter()
+AClimbingSystemCharacter::AClimbingSystemCharacter(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer.SetDefaultSubobjectClass<UCustomMovementComponent>(CharacterMovementComponentName))
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -24,6 +25,7 @@ AClimbingSystemCharacter::AClimbingSystemCharacter()
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
+	CustomMovementComponent = Cast<UCustomMovementComponent>(GetCharacterMovement());
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 
@@ -51,31 +53,24 @@ AClimbingSystemCharacter::AClimbingSystemCharacter()
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
-void AClimbingSystemCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-	Debug::Print(TEXT("Do Working!!"));
-}
-
 void AClimbingSystemCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ThisClass::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ThisClass::StopJumping);
 
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AClimbingSystemCharacter::Move);
-		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &AClimbingSystemCharacter::Look);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
+		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
 
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AClimbingSystemCharacter::Look);
-	}
-	else
-	{
-		UE_LOG(LogClimbingSystem, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
+
+		// Climbing
+		EnhancedInputComponent->BindAction(ClimbAction, ETriggerEvent::Started, this, &ThisClass::OnClimbActionStarted);
 	}
 }
 
@@ -95,6 +90,11 @@ void AClimbingSystemCharacter::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
+}
+
+void AClimbingSystemCharacter::OnClimbActionStarted(const FInputActionValue& Value)
+{
+	Debug::Print(TEXT("클라이밍 액션 시작"));
 }
 
 void AClimbingSystemCharacter::DoMove(float Right, float Forward)

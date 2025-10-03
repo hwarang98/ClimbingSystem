@@ -10,6 +10,7 @@
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
+class UCustomMovementComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -23,52 +24,47 @@ class AClimbingSystemCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom;
-
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FollowCamera;
-	
-protected:
-
-	/** Jump Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* JumpAction;
-
-	/** Move Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* MoveAction;
-
-	/** Look Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* LookAction;
-
-	/** Mouse Look Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* MouseLookAction;
-
 public:
 
 	/** Constructor */
-	AClimbingSystemCharacter();
-	virtual void BeginPlay() override;
+	AClimbingSystemCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USpringArmComponent> CameraBoom;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCustomMovementComponent> CustomMovementComponent;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> JumpAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> MoveAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> LookAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> MouseLookAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> ClimbAction;
+	
 
 	/** Initialize input action bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
 
-protected:
 
-	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
-
-	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+	void OnClimbActionStarted(const FInputActionValue& Value);
 
-public:
+private:
 
 	/** Handles move inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
@@ -87,11 +83,8 @@ public:
 	virtual void DoJumpEnd();
 
 public:
-
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE UCustomMovementComponent* GetCustomMovementComponent() const { return CustomMovementComponent; }
 };
 
