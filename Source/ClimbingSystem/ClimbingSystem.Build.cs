@@ -25,20 +25,7 @@ public class ClimbingSystem : ModuleRules
 
 		PublicIncludePaths.AddRange(new string[] {
 			"ClimbingSystem",
-			"ClimbingSystem/Public",
-			"ClimbingSystem/Variant_Platforming",
-			"ClimbingSystem/Variant_Platforming/Animation",
-			"ClimbingSystem/Variant_Combat",
-			"ClimbingSystem/Variant_Combat/AI",
-			"ClimbingSystem/Variant_Combat/Animation",
-			"ClimbingSystem/Variant_Combat/Gameplay",
-			"ClimbingSystem/Variant_Combat/Interfaces",
-			"ClimbingSystem/Variant_Combat/UI",
-			"ClimbingSystem/Variant_SideScrolling",
-			"ClimbingSystem/Variant_SideScrolling/AI",
-			"ClimbingSystem/Variant_SideScrolling/Gameplay",
-			"ClimbingSystem/Variant_SideScrolling/Interfaces",
-			"ClimbingSystem/Variant_SideScrolling/UI"
+			"ClimbingSystem/Public"
 		});
 
 		// Uncomment if you are using Slate UI
