@@ -52,7 +52,8 @@ protected:
 public:
 
 	/** Constructor */
-	AClimbingSystemCharacter();	
+	AClimbingSystemCharacter();
+	virtual void BeginPlay() override;
 
 protected:
 
