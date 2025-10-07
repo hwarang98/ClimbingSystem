@@ -3,19 +3,68 @@
 
 #include "Components/CustomMovementComponent.h"
 
+#include "DebugHelper.h"
 #include "GameFramework/Character.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 void UCustomMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	TraceClimbableSurface();
-	TraceFromEyeHeight(100.f);
+	// TraceClimbableSurface();
+	// TraceFromEyeHeight(100.f);
 }
 
-TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const FVector& Start, const FVector& End, bool bShowDebugShape)
+void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
+{
+	if(bEnableClimb)
+	{
+		if(CanStartClimbing())
+		{
+			//Enter the climb state
+			Debug::Print(TEXT("클라이밍 시작 가능"));
+		}
+		else
+		{
+			Debug::Print(TEXT("클라이밍 시작 불가능"));
+		}
+	}
+	else
+	{
+		//Stop climbing
+	}
+}
+
+bool UCustomMovementComponent::IsClimbing() const
+{
+	return MovementMode == MOVE_Custom && CustomMovementMode == ECustomMovementMode::MOVE_Climb;
+}
+
+bool UCustomMovementComponent::CanStartClimbing()
+{
+	if (IsFalling() || !TraceClimbableSurfaces() || !TraceFromEyeHeight(100.f).bBlockingHit)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const FVector& Start, const FVector& End, bool bShowDebugShape, bool bDrawPersistantShapes)
 {
 	TArray<FHitResult> OutCapsuleTraceHitResults;
+	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
+
+	if (bShowDebugShape)
+	{
+		DebugTraceType = EDrawDebugTrace::ForOneFrame;
+
+		if (bDrawPersistantShapes)
+		{
+			DebugTraceType = EDrawDebugTrace::Persistent;
+
+		}
+	}
+	
 	UKismetSystemLibrary::CapsuleTraceMultiForObjects(
 		this,
 		Start,
@@ -25,7 +74,7 @@ TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const F
 		ClimbableSurfaceTraceTypes,
 		false,
 		TArray<AActor*>(),
-		bShowDebugShape ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+		DebugTraceType,
 		OutCapsuleTraceHitResults,
 		false
 	);
@@ -33,9 +82,22 @@ TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const F
 	return OutCapsuleTraceHitResults;
 }
 
-FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& Start, const FVector& End, bool bShowDebugShape)
+FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& Start, const FVector& End, bool bShowDebugShape, bool bDrawPersistantShapes)
 {
 	FHitResult OutResult;
+	
+	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
+
+	if (bShowDebugShape)
+	{
+		DebugTraceType = EDrawDebugTrace::ForOneFrame;
+
+		if (bDrawPersistantShapes)
+		{
+			DebugTraceType = EDrawDebugTrace::Persistent;
+
+		}
+	}
 	
 	UKismetSystemLibrary::LineTraceSingleForObjects(
 	this,
@@ -44,7 +106,7 @@ FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& St
 		ClimbableSurfaceTraceTypes,
 		false,
 		TArray<AActor*>(),
-		bShowDebugShape ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+		DebugTraceType,
 		OutResult,
 		false
 	);
@@ -52,16 +114,18 @@ FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& St
 	return OutResult;
 }
 
-void UCustomMovementComponent::TraceClimbableSurface()
+bool UCustomMovementComponent::TraceClimbableSurfaces()
 {
 	const FVector StartOffset = UpdatedComponent->GetForwardVector() * 30.f;
 	const FVector Start = UpdatedComponent->GetComponentLocation() + StartOffset;
 	const FVector End = Start + UpdatedComponent->GetForwardVector();
 	
-	DoCapsuleTraceMultiByObject(Start, End, true);
+	ClimbableSurfacesTracedResult = DoCapsuleTraceMultiByObject(Start, End, true, true);
+
+	return !ClimbableSurfacesTracedResult.IsEmpty();
 }
 
-void UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, float TraceStartOffset)
+FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, float TraceStartOffset)
 {
 	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
 	const FVector EyeHeightOffset = UpdatedComponent->GetUpVector() * (CharacterOwner->BaseEyeHeight + TraceStartOffset);
@@ -69,5 +133,5 @@ void UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, float Tra
 	const FVector Start = ComponentLocation + EyeHeightOffset;
 	const FVector End = Start + UpdatedComponent->GetForwardVector() * TraceDistance;
 
-	DoLineTraceSingleByObject(Start, End, true);
+	return DoLineTraceSingleByObject(Start, End, true, true);
 }

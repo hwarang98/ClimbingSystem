@@ -94,7 +94,19 @@ void AClimbingSystemCharacter::Look(const FInputActionValue& Value)
 
 void AClimbingSystemCharacter::OnClimbActionStarted(const FInputActionValue& Value)
 {
-	Debug::Print(TEXT("클라이밍 액션 시작"));
+	if (!CustomMovementComponent)
+	{
+		return;
+	}
+
+	if(!CustomMovementComponent->IsClimbing())
+	{
+		CustomMovementComponent->ToggleClimbing(true);
+	}
+	else
+	{
+		CustomMovementComponent->ToggleClimbing(false);
+	}
 }
 
 void AClimbingSystemCharacter::DoMove(float Right, float Forward)
