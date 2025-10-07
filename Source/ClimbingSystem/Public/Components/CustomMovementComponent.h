@@ -23,9 +23,12 @@ class CLIMBINGSYSTEM_API UCustomMovementComponent : public UCharacterMovementCom
 	GENERATED_BODY()
 
 public:
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	void ToggleClimbing(bool bEnableClimb);
 	bool IsClimbing() const;
+
+protected:
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 
 private:
 #pragma region ClimbTraces
@@ -40,6 +43,8 @@ private:
 	bool TraceClimbableSurfaces();
 	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f);
 	bool CanStartClimbing();
+	void StartClimbing();
+	void StopClimbing();
 
 #pragma endregion
 
