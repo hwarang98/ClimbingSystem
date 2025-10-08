@@ -57,19 +57,16 @@ protected:
 
 	/** Initialize input action bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	
-
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void OnClimbActionStarted(const FInputActionValue& Value);
+	
+	void HandleGroundMovementInput(FVector& OutForward, FVector& OutRight) const;
+	void HandleClimbMovementInput(FVector& OutForward, FVector& OutRight) const;
+	void HandleMovementDirections(FVector& OutForward, FVector& OutRight) const;
 
 private:
-
-	/** Handles move inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
-	virtual void DoMove(float Right, float Forward);
-
 	/** Handles look inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoLook(float Yaw, float Pitch);

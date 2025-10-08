@@ -25,6 +25,7 @@ class CLIMBINGSYSTEM_API UCustomMovementComponent : public UCharacterMovementCom
 public:
 	void ToggleClimbing(bool bEnableClimb);
 	bool IsClimbing() const;
+	FORCEINLINE FVector GetClimbableSurfaceNormal() const { return CurrentClimbableSurfaceNormal; }
 
 protected:
 
@@ -59,7 +60,6 @@ private:
 
 	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f);
 	FQuat GetClimbRotation(float DeltaTime);
-	
 
 #pragma endregion
 

@@ -76,11 +76,25 @@ void AClimbingSystemCharacter::SetupPlayerInputComponent(UInputComponent* Player
 
 void AClimbingSystemCharacter::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
-	FVector2D MovementVector = Value.Get<FVector2D>();
+	if (!CustomMovementComponent || !GetController())
+	{
+		return;
+	}
 
-	// route the input
-	DoMove(MovementVector.X, MovementVector.Y);
+	const FVector2D InputVector = Value.Get<FVector2D>();
+	if (InputVector.IsNearlyZero())
+	{
+		return;
+	}
+
+	// 이동 방향 계산
+	FVector ForwardDirection;
+	FVector RightDirection;
+	HandleMovementDirections(ForwardDirection, RightDirection);
+
+	// 입력 방향에 따라 이동 적용
+	AddMovementInput(ForwardDirection, InputVector.Y);
+	AddMovementInput(RightDirection, InputVector.X);
 }
 
 void AClimbingSystemCharacter::Look(const FInputActionValue& Value)
@@ -109,23 +123,41 @@ void AClimbingSystemCharacter::OnClimbActionStarted(const FInputActionValue& Val
 	}
 }
 
-void AClimbingSystemCharacter::DoMove(float Right, float Forward)
+void AClimbingSystemCharacter::HandleGroundMovementInput(FVector& OutForward, FVector& OutRight) const
 {
-	if (GetController() != nullptr)
+	if (Controller)
 	{
-		// find out which way is forward
-		const FRotator Rotation = GetController()->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		const FRotator ControlRotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0, ControlRotation.Yaw, 0);
 
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		const FRotationMatrix RotationMatrix(YawRotation);
+		OutForward = RotationMatrix.GetUnitAxis(EAxis::X);
+		OutRight   = RotationMatrix.GetUnitAxis(EAxis::Y);
+	}
+	else
+	{
+		OutForward = FVector::ZeroVector;
+		OutRight   = FVector::ZeroVector;
+	}
+}
 
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+void AClimbingSystemCharacter::HandleClimbMovementInput(FVector& OutForward, FVector& OutRight) const 
+{
+	const FVector SurfaceNormal = -CustomMovementComponent->GetClimbableSurfaceNormal();
 
-		// add movement 
-		AddMovementInput(ForwardDirection, Forward);
-		AddMovementInput(RightDirection, Right);
+	OutForward = FVector::CrossProduct(SurfaceNormal, GetActorRightVector());
+	OutRight = FVector::CrossProduct(SurfaceNormal, -GetActorUpVector());
+}
+
+void AClimbingSystemCharacter::HandleMovementDirections(FVector& OutForward, FVector& OutRight) const
+{
+	if (CustomMovementComponent->IsClimbing())
+	{
+		HandleClimbMovementInput(OutForward, OutRight);
+	}
+	else
+	{
+		HandleGroundMovementInput(OutForward, OutRight);
 	}
 }
 
