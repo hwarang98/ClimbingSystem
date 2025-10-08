@@ -27,8 +27,16 @@ public:
 	bool IsClimbing() const;
 
 protected:
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+
+#pragma region Overriden Functions
+
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
+	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
+	virtual float GetMaxSpeed() const override;
+	virtual float GetMaxAcceleration() const override;
+
+#pragma endregion 
 
 private:
 #pragma region ClimbTraces
@@ -41,16 +49,25 @@ private:
 #pragma region Climb Core
 
 	bool TraceClimbableSurfaces();
-	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f);
 	bool CanStartClimbing();
+	
 	void StartClimbing();
 	void StopClimbing();
+	void PhysClimb(float deltaTime, int32 Iterations);
+	void ProcessClimbableSurfaceInfo();
+	void SnapMovementToClimbableSurfaces(float DeltaTime);
+
+	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f);
+	FQuat GetClimbRotation(float DeltaTime);
+	
 
 #pragma endregion
 
 #pragma region Climb Core Variable
 
-	TArray<FHitResult> ClimbableSurfacesTracedResult;
+	TArray<FHitResult> ClimbableSurfacesTracedResults;
+	FVector CurrentClimbableSurfaceLocation;
+	FVector CurrentClimbableSurfaceNormal;
 
 #pragma endregion
 
@@ -64,6 +81,15 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
 	float ClimbCapsuleTraceHalfHeight = 72.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	float MaxBreakClimbDeceleration = 400.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	float MaxClimbSpeed = 100.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	float MaxClimbAcceleration = 300.f;
 	
 
 #pragma endregion
