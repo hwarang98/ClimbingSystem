@@ -42,8 +42,8 @@ protected:
 private:
 #pragma region ClimbTraces
 
-	TArray<FHitResult> DoCapsuleTraceMultiByObject(const FVector& Start, const FVector& End, bool bShowDebugShape = false, bool bDrawPersistantShapes = false);
-	FHitResult DoLineTraceSingleByObject(const FVector& Start, const FVector& End, bool bShowDebugShape = false, bool bDrawPersistantShapes = false);
+	TArray<FHitResult> DoCapsuleTraceMultiByObject(const FVector& Start, const FVector& End, bool bInShowDebugShape, bool bInDrawPersistantShapes);
+	FHitResult DoLineTraceSingleByObject(const FVector& Start, const FVector& End, bool bInShowDebugShape, bool bInDrawPersistantShapes);
 
 #pragma endregion
 
@@ -51,6 +51,7 @@ private:
 
 	bool TraceClimbableSurfaces();
 	bool CanStartClimbing();
+	bool CheckShouldStopClimbing();
 	
 	void StartClimbing();
 	void StopClimbing();
@@ -73,23 +74,32 @@ private:
 
 #pragma region Climb BP Variables
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	TArray<TEnumAsByte<EObjectTypeQuery>> ClimbableSurfaceTraceTypes;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	float ClimbCapsuleTraceRadius = 50.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	float ClimbCapsuleTraceHalfHeight = 72.f;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	float MaxBreakClimbDeceleration = 400.f;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	float MaxClimbSpeed = 100.f;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	float MaxClimbAcceleration = 300.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
+	float MaxClimbableSurfaceAngle = 60.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement | Debug", meta = (AllowPrivateAccess = "true"))
+	bool bShowDebugShape = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement | Debug", meta = (AllowPrivateAccess = "true"))
+	bool bDrawPersistantShapes = true;
 	
 
 #pragma endregion

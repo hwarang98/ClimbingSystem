@@ -11,8 +11,12 @@
 void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	// TraceClimbableSurface();
-	// TraceFromEyeHeight(100.f);
+	
+	if (bShowDebugShape)
+	{
+		TraceClimbableSurfaces();
+		TraceFromEyeHeight(100.f);
+	}
 }
 
 void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
@@ -54,11 +58,8 @@ float UCustomMovementComponent::GetMaxSpeed() const
 	{
 		return MaxClimbSpeed;
 	}
+	
 	return Super::GetMaxSpeed();
-	// else
-	// {
-	// 	return Super::GetMaxSpeed();
-	// }
 }
 
 float UCustomMovementComponent::GetMaxAcceleration() const
@@ -67,11 +68,8 @@ float UCustomMovementComponent::GetMaxAcceleration() const
 	{
 		return MaxClimbAcceleration;
 	}
+	
 	return Super::GetMaxAcceleration();
-	// else
-	// {
-	// 	return Super::GetMaxAcceleration();
-	// }
 }
 
 void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
@@ -81,12 +79,10 @@ void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
 		if(CanStartClimbing())
 		{
 			//Enter the climb state
-			Debug::Print(TEXT("클라이밍 시작 가능"));
 			StartClimbing();
 		}
 		else
 		{
-			Debug::Print(TEXT("클라이밍 시작 불가능"));
 		}
 	}
 	else
@@ -111,6 +107,24 @@ bool UCustomMovementComponent::CanStartClimbing()
 	return true;
 }
 
+bool UCustomMovementComponent::CheckShouldStopClimbing()
+{
+	if (ClimbableSurfacesTracedResults.IsEmpty())
+	{
+		return true;
+	}
+
+	const float DotResult = FVector::DotProduct(CurrentClimbableSurfaceNormal, FVector::UpVector);
+	const float DegreeDifferent = FMath::RadiansToDegrees(FMath::Acos(DotResult));
+
+	if (DegreeDifferent <= MaxClimbableSurfaceAngle)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 void UCustomMovementComponent::StartClimbing()
 {
 	SetMovementMode(MOVE_Custom, ECustomMovementMode::MOVE_Climb);
@@ -131,6 +145,11 @@ void UCustomMovementComponent::PhysClimb(float deltaTime, int32 Iterations)
 
 	TraceClimbableSurfaces();
 	ProcessClimbableSurfaceInfo();
+
+	if (CheckShouldStopClimbing())
+	{
+		StopClimbing();
+	}
 
 	// 루트 모션(root motion) 적용 전의 속도를 복원
 	// (애니메이션 루트 모션으로 인해 덮어쓰기된 속도를 복구)
@@ -311,16 +330,16 @@ FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
 }
 
 
-TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const FVector& Start, const FVector& End, bool bShowDebugShape, bool bDrawPersistantShapes)
+TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const FVector& Start, const FVector& End, bool bInShowDebugShape, bool bInDrawPersistantShapes)
 {
 	TArray<FHitResult> OutCapsuleTraceHitResults;
 	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
 
-	if (bShowDebugShape)
+	if (bInShowDebugShape)
 	{
 		DebugTraceType = EDrawDebugTrace::ForOneFrame;
 
-		if (bDrawPersistantShapes)
+		if (bInDrawPersistantShapes)
 		{
 			DebugTraceType = EDrawDebugTrace::Persistent;
 
@@ -344,17 +363,17 @@ TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const F
 	return OutCapsuleTraceHitResults;
 }
 
-FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& Start, const FVector& End, bool bShowDebugShape, bool bDrawPersistantShapes)
+FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& Start, const FVector& End, bool bInShowDebugShape, bool bInDrawPersistantShapes)
 {
 	FHitResult OutResult;
 	
 	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
 
-	if (bShowDebugShape)
+	if (bInShowDebugShape)
 	{
 		DebugTraceType = EDrawDebugTrace::ForOneFrame;
 
-		if (bDrawPersistantShapes)
+		if (bInDrawPersistantShapes)
 		{
 			DebugTraceType = EDrawDebugTrace::Persistent;
 
@@ -382,7 +401,7 @@ bool UCustomMovementComponent::TraceClimbableSurfaces()
 	const FVector Start = UpdatedComponent->GetComponentLocation() + StartOffset;
 	const FVector End = Start + UpdatedComponent->GetForwardVector();
 	
-	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true);
+	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, bShowDebugShape, bDrawPersistantShapes);
 
 	return !ClimbableSurfacesTracedResults.IsEmpty();
 }
@@ -395,5 +414,5 @@ FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, flo
 	const FVector Start = ComponentLocation + EyeHeightOffset;
 	const FVector End = Start + UpdatedComponent->GetForwardVector() * TraceDistance;
 
-	return DoLineTraceSingleByObject(Start, End);
+	return DoLineTraceSingleByObject(Start, End, bShowDebugShape, bDrawPersistantShapes);
 }
