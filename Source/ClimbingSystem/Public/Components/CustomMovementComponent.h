@@ -25,17 +25,22 @@ class CLIMBINGSYSTEM_API UCustomMovementComponent : public UCharacterMovementCom
 public:
 	void ToggleClimbing(bool bEnableClimb);
 	bool IsClimbing() const;
+
+	FVector GetUnrotatedClimbVelocity() const;
+	
 	FORCEINLINE FVector GetClimbableSurfaceNormal() const { return CurrentClimbableSurfaceNormal; }
 
 protected:
 
 #pragma region Overriden Functions
 
+	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 	virtual float GetMaxSpeed() const override;
 	virtual float GetMaxAcceleration() const override;
+	virtual FVector ConstrainAnimRootMotionVelocity(const FVector& RootMotionVelocity, const FVector& CurrentVelocity) const override;
 
 #pragma endregion 
 
@@ -52,15 +57,22 @@ private:
 	bool TraceClimbableSurfaces();
 	bool CanStartClimbing();
 	bool CheckShouldStopClimbing();
+	bool CheckHasReachedFloor();
+	bool CheckHasReachedLedge();
+	bool CanClimbDownLedge();
 	
 	void StartClimbing();
 	void StopClimbing();
 	void PhysClimb(float deltaTime, int32 Iterations);
 	void ProcessClimbableSurfaceInfo();
 	void SnapMovementToClimbableSurfaces(float DeltaTime);
+	void PlayClimbMontage(TObjectPtr<UAnimMontage> MontageToPlay);
 
 	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f);
 	FQuat GetClimbRotation(float DeltaTime);
+
+	UFUNCTION()
+	void OnClimbMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 #pragma endregion
 
@@ -69,6 +81,9 @@ private:
 	TArray<FHitResult> ClimbableSurfacesTracedResults;
 	FVector CurrentClimbableSurfaceLocation;
 	FVector CurrentClimbableSurfaceNormal;
+
+	UPROPERTY()
+	TObjectPtr<UAnimInstance> OwningPlayerAnimInstance;
 
 #pragma endregion
 
@@ -93,14 +108,22 @@ private:
 	float MaxClimbAcceleration = 300.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
+	float ClimbDownWalkableSurfaceTraceOffset = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
+	float ClimbDownLedgeTraceOffset = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	float MaxClimbableSurfaceAngle = 60.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement | Debug", meta = (AllowPrivateAccess = "true"))
-	bool bShowDebugShape = true;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> IdleToClimbMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement | Debug", meta = (AllowPrivateAccess = "true"))
-	bool bDrawPersistantShapes = true;
-	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> ClimbToTopMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> ClimbDownLedgeMontage;
 
 #pragma endregion
 };
