@@ -1,38 +1,29 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
+name: Bug Report
+about: 버그를 발견했을 때 작성해주세요
+title: "[BUG] "
+labels: bug
+assignees: ""
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## 🐞 버그 설명
+간단하게 버그 내용을 작성해주세요.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+## 🔄 재현 방법
+버그를 재현하는 단계:
+1.
+2.
+3. 
+4. 
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## 💻 환경
+- 기타 환경: [e.g. 데디서버.. 등]
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## 📷 스크린샷/영상
+문제가 보이는 화면이 있다면 첨부해주세요.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+## ✅ 기대 결과
+정상적으로 동작해야 하는 내용
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+## 📝 추가 내용
+버그와 관련된 참고 사항
