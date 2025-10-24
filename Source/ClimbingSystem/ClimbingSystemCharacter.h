@@ -29,8 +29,14 @@ public:
 
 	/** Constructor */
 	AClimbingSystemCharacter(const FObjectInitializer& ObjectInitializer);
+	
+	/** Initialize input action bindings */
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	void OnClimbActionStarted(const FInputActionValue& Value);
 
-protected:
+private:
+	
+#pragma region Components
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
 	
@@ -42,7 +48,10 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent; 
-	
+#pragma endregion
+
+#pragma region Inputs
+		
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> JumpAction;
 	
@@ -58,30 +67,25 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> ClimbAction;
 	
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoLook(float Yaw, float Pitch);
+	
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoJumpStart();
+	
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoJumpEnd();
+#pragma endregion
 
-	/** Initialize input action bindings */
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+#pragma region InputCallback
+	
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void OnClimbActionStarted(const FInputActionValue& Value);
-	
 	void HandleGroundMovementInput(FVector& OutForward, FVector& OutRight) const;
 	void HandleClimbMovementInput(FVector& OutForward, FVector& OutRight) const;
 	void HandleMovementDirections(FVector& OutForward, FVector& OutRight) const;
-
-private:
-	/** Handles look inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
-	virtual void DoLook(float Yaw, float Pitch);
-
-	/** Handles jump pressed inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
-	virtual void DoJumpStart();
-
-	/** Handles jump pressed inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
-	virtual void DoJumpEnd();
+	
+#pragma endregion 
 
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

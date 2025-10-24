@@ -3,7 +3,9 @@
 
 #include "Components/CustomMovementComponent.h"
 
+#include "ClimbingSystemCharacter.h"
 #include "DebugHelper.h"
+#include "MotionWarpingComponent.h"
 #include "AI/NavigationSystemBase.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
@@ -21,6 +23,8 @@ void UCustomMovementComponent::BeginPlay()
 		OwningPlayerAnimInstance->OnMontageEnded.AddDynamic(this, &ThisClass::OnClimbMontageEnded);
 		OwningPlayerAnimInstance->OnMontageBlendingOut.AddDynamic(this, &ThisClass::OnClimbMontageEnded);
 	}
+	
+	OwningPlayerCharacter = Cast<AClimbingSystemCharacter>(CharacterOwner);
 }
 
 void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -293,7 +297,7 @@ bool UCustomMovementComponent::CanStartVaulting(FVector& OutVaultStartPosition, 
 		const FVector StartTrace = ComponentLocation + UpVector * 100.f + ComponentForward * 100.f * (i + 1);
 		const FVector EndTrace = StartTrace + DownVector * 100.f * (i + 1);
 
-		const FHitResult VaultTraceHit = DoLineTraceSingleByObject(StartTrace, EndTrace, true, true);
+		const FHitResult VaultTraceHit = DoLineTraceSingleByObject(StartTrace, EndTrace, false, false);
 
 		const FVector VaultingTraceHitImpactPoint = VaultTraceHit.ImpactPoint;
 
@@ -303,7 +307,7 @@ bool UCustomMovementComponent::CanStartVaulting(FVector& OutVaultStartPosition, 
 			OutVaultStartPosition = VaultingTraceHitImpactPoint;
 		}
 
-		if (i == VaultTraceSteps - 1 && VaultTraceHit.bBlockingHit)
+		if (i == VaultLandTraceIndex && VaultTraceHit.bBlockingHit)
 		{
 			OutVaultLandPosition = VaultingTraceHitImpactPoint;
 		}
@@ -327,13 +331,11 @@ void UCustomMovementComponent::TryStartVaulting()
 	
 	if (CanStartVaulting(VaultStartPosition, VaultLandPosition))
 	{
-		// 볼팅 애니메이션 시작
-		Debug::Print(TEXT("볼팅 시작 위치: ") + VaultStartPosition.ToCompactString());
-		Debug::Print(TEXT("볼팅 랜딩 위치: ") + VaultLandPosition.ToCompactString());
-	}
-	else
-	{
-		Debug::Print(TEXT("Unable to Vault "));
+		SetMotionWarpTarget(VaultStartPointName, VaultStartPosition);
+		SetMotionWarpTarget(VaultLandPointName, VaultLandPosition);
+		
+		StartClimbing();
+		PlayClimbMontage(VaultMontage);
 	}
 }
 
@@ -515,6 +517,16 @@ void UCustomMovementComponent::PlayClimbMontage(TObjectPtr<UAnimMontage> Montage
 	OwningPlayerAnimInstance->Montage_Play(MontageToPlay);
 }
 
+void UCustomMovementComponent::SetMotionWarpTarget(const FName& InWarpTargetName, const FVector& InTargetPosition)
+{
+	if (!OwningPlayerCharacter)
+	{
+		return;
+	}
+
+	OwningPlayerCharacter->GetMotionWarpingComponent()->AddOrUpdateWarpTargetFromLocation(InWarpTargetName, InTargetPosition);
+}
+
 /**
  * @brief 캐릭터가 등반 중인 벽면을 자연스럽게 바라보도록 회전 보정하는 함수
  *
@@ -566,7 +578,7 @@ void UCustomMovementComponent::OnClimbMontageEnded(UAnimMontage* Montage, bool b
 		StopMovementImmediately();
 	}
 	
-	if (Montage == ClimbToTopMontage)
+	if (Montage == ClimbToTopMontage || Montage == VaultMontage)
 	{
 		SetMovementMode(MOVE_Walking);
 	}

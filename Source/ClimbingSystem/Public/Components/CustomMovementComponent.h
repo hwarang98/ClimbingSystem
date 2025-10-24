@@ -6,6 +6,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CustomMovementComponent.generated.h"
 
+class AClimbingSystemCharacter;
+
 UENUM(BlueprintType)
 namespace ECustomMovementMode
 {
@@ -69,6 +71,7 @@ private:
 	void ProcessClimbableSurfaceInfo();
 	void SnapMovementToClimbableSurfaces(float DeltaTime);
 	void PlayClimbMontage(TObjectPtr<UAnimMontage> MontageToPlay);
+	void SetMotionWarpTarget(const FName& InWarpTargetName, const FVector& InTargetPosition);
 
 	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f);
 	FQuat GetClimbRotation(float DeltaTime);
@@ -86,6 +89,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UAnimInstance> OwningPlayerAnimInstance;
+
+	UPROPERTY()
+	TObjectPtr<AClimbingSystemCharacter> OwningPlayerCharacter;
 
 #pragma endregion
 
@@ -128,7 +134,19 @@ private:
 	TObjectPtr<UAnimMontage> ClimbDownLedgeMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> VaultMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
 	int32 VaultTraceSteps = 5;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	int32 VaultLandTraceIndex = 3;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	FName VaultStartPointName = FName("VaultStartPoint");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	FName VaultLandPointName = FName("VaultLandPoint");
 
 #pragma endregion
 };
