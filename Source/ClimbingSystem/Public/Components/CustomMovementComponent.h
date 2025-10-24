@@ -60,7 +60,9 @@ private:
 	bool CheckHasReachedFloor();
 	bool CheckHasReachedLedge();
 	bool CanClimbDownLedge();
-	
+	bool CanStartVaulting(FVector& OutVaultStartPosition, FVector& OutVaultLandPosition);
+
+	void TryStartVaulting();
 	void StartClimbing();
 	void StopClimbing();
 	void PhysClimb(float deltaTime, int32 Iterations);
@@ -124,6 +126,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Climbing", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> ClimbDownLedgeMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	int32 VaultTraceSteps = 5;
 
 #pragma endregion
 };

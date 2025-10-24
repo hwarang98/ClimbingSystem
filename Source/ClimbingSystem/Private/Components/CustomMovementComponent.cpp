@@ -106,8 +106,12 @@ void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
 		{
 			PlayClimbMontage(ClimbDownLedgeMontage);
 		}
+		else
+		{
+			TryStartVaulting();
+		}
 	}
-	else
+	if (!bEnableClimb)
 	{
 		//Stop climbing
 		StopClimbing();
@@ -250,6 +254,87 @@ bool UCustomMovementComponent::CanClimbDownLedge()
 	}
 
 	return false;
+}
+
+/**
+ * @brief 캐릭터가 볼팅을 시작할 수 있는지 확인하고 시작 및 착지 위치를 계산
+ *
+ * 이 함수는 캐릭터의 현재 상태와 주변 환경을 기반으로 볼팅 가능 여부를 판단하며,
+ * 볼팅 시작 위치 및 끝 위치를 계산합니다.
+ * 만약 캐릭터가 공중에 있으면 볼팅은 불가능하며, 이 경우 `false`를 반환합니다.
+ *
+ * 계산 과정은 다음과 같습니다:
+ * - 캐릭터의 현재 위치와 방향을 기준으로 상단으로 올린 시작 위치 및 하단으로 연장된 끝 위치를 트레이스
+ * - 각 스텝의 트레이스를 통해 시작 위치(`OutVaultStartPosition`)와 착지 위치(`OutVaultLandPosition`)를 감지
+ *
+ * 만약 시작 및 착지 위치 모두 유효하면 볼팅 가능 여부를 `true`로 반환합니다.
+ *
+ * @param OutVaultStartPosition 계산된 볼팅 시작 위치를 저장하는 출력 인자
+ * @param OutVaultLandPosition 계산된 볼팅 착지 위치를 저장하는 출력 인자
+ * @return 볼팅을 시작할 수 있으면 `true`, 그렇지 않으면 `false`
+ */
+bool UCustomMovementComponent::CanStartVaulting(FVector& OutVaultStartPosition, FVector& OutVaultLandPosition)
+{
+	if (IsFalling())
+	{
+		return false;
+	}
+
+	OutVaultStartPosition = FVector::ZeroVector;
+	OutVaultLandPosition = FVector::ZeroVector;
+	
+	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+	const FVector ComponentForward = UpdatedComponent->GetForwardVector();
+	const FVector UpVector = UpdatedComponent->GetUpVector();
+	const FVector DownVector = -UpdatedComponent->GetUpVector();
+
+	for (int32 i = 0; i < VaultTraceSteps; ++i)
+	{
+		const FVector StartTrace = ComponentLocation + UpVector * 100.f + ComponentForward * 100.f * (i + 1);
+		const FVector EndTrace = StartTrace + DownVector * 100.f * (i + 1);
+
+		const FHitResult VaultTraceHit = DoLineTraceSingleByObject(StartTrace, EndTrace, true, true);
+
+		const FVector VaultingTraceHitImpactPoint = VaultTraceHit.ImpactPoint;
+
+		// 첫번째 볼팅 위치 선정
+		if (i == 0 && VaultTraceHit.bBlockingHit)
+		{
+			OutVaultStartPosition = VaultingTraceHitImpactPoint;
+		}
+
+		if (i == VaultTraceSteps - 1 && VaultTraceHit.bBlockingHit)
+		{
+			OutVaultLandPosition = VaultingTraceHitImpactPoint;
+		}
+	}
+
+	if (OutVaultStartPosition != FVector::ZeroVector && OutVaultLandPosition != FVector::ZeroVector)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+	
+}
+
+void UCustomMovementComponent::TryStartVaulting()
+{
+	FVector VaultStartPosition;
+	FVector VaultLandPosition;
+	
+	if (CanStartVaulting(VaultStartPosition, VaultLandPosition))
+	{
+		// 볼팅 애니메이션 시작
+		Debug::Print(TEXT("볼팅 시작 위치: ") + VaultStartPosition.ToCompactString());
+		Debug::Print(TEXT("볼팅 랜딩 위치: ") + VaultLandPosition.ToCompactString());
+	}
+	else
+	{
+		Debug::Print(TEXT("Unable to Vault "));
+	}
 }
 
 void UCustomMovementComponent::StartClimbing()
