@@ -6,6 +6,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CustomMovementComponent.generated.h"
 
+DECLARE_DELEGATE(FOnEnterClimbState)
+DECLARE_DELEGATE(FOnExitClimbState)
+
 class AClimbingSystemCharacter;
 
 UENUM(BlueprintType)
@@ -26,9 +29,14 @@ class CLIMBINGSYSTEM_API UCustomMovementComponent : public UCharacterMovementCom
 
 public:
 	void ToggleClimbing(bool bEnableClimb);
+	void RequestHopping();
+	
 	bool IsClimbing() const;
 
 	FVector GetUnrotatedClimbVelocity() const;
+
+	FOnEnterClimbState OnEnterClimbStateDelegate;
+	FOnExitClimbState OnExitClimbStateDelegate;
 	
 	FORCEINLINE FVector GetClimbableSurfaceNormal() const { return CurrentClimbableSurfaceNormal; }
 
@@ -63,6 +71,8 @@ private:
 	bool CheckHasReachedLedge();
 	bool CanClimbDownLedge();
 	bool CanStartVaulting(FVector& OutVaultStartPosition, FVector& OutVaultLandPosition);
+	bool CheckCanHopUp(FVector& OutHopUpTargetPosition);
+	bool CheckCanHopDown(FVector& OutHopDownTargetPosition);
 
 	void TryStartVaulting();
 	void StartClimbing();
@@ -72,8 +82,10 @@ private:
 	void SnapMovementToClimbableSurfaces(float DeltaTime);
 	void PlayClimbMontage(TObjectPtr<UAnimMontage> MontageToPlay);
 	void SetMotionWarpTarget(const FName& InWarpTargetName, const FVector& InTargetPosition);
+	void HandleHopUp();
+	void HandleHopDown();
 
-	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f);
+	FHitResult TraceFromEyeHeight(float TraceDistance, float TraceStartOffset = 0.f, bool bInShowDebugShape = false, bool bInDrawPersistantShapes = false);
 	FQuat GetClimbRotation(float DeltaTime);
 
 	UFUNCTION()
@@ -137,6 +149,12 @@ private:
 	TObjectPtr<UAnimMontage> VaultMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> HopUpMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> HopDownMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
 	int32 VaultTraceSteps = 5;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
@@ -147,6 +165,12 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
 	FName VaultLandPointName = FName("VaultLandPoint");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	FName HopUpTargetPointName = FName("HopUpTargetPoint");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement | Vaulting", meta = (AllowPrivateAccess = "true"))
+	FName HopDownTargetPointName = FName("HopDownTargetPoint");
 
 #pragma endregion
 };

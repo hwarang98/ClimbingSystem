@@ -9,53 +9,102 @@
 #include "ClimbingSystem.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
+void AClimbingSystemPlayerController::EnableDefaultInputState()
+{
+	// 1. 등반 컨텍스트를 모두 제거합니다.
+	for (UInputMappingContext* Context : ClimbMappingContexts)
+	{
+		RemoveInputMappingContext(Context);
+	}
+
+	// 2. 기본 컨텍스트를 모두 추가합니다. (우선순위를 0으로 설정)
+	for (UInputMappingContext* Context : DefaultMappingContexts)
+	{
+		AddInputMappingContext(Context, 0);
+	}
+}
+
+void AClimbingSystemPlayerController::EnableClimbingInputState()
+{
+	// 1. 기본 컨텍스트를 모두 제거합니다.
+	for (UInputMappingContext* Context : DefaultMappingContexts)
+	{
+		RemoveInputMappingContext(Context);
+	}
+
+	// 2. 등반 컨텍스트를 모두 추가합니다. (우선순위를 1로 설정)
+	for (UInputMappingContext* Context : ClimbMappingContexts)
+	{
+		AddInputMappingContext(Context, 1);
+	}
+}
+
 void AClimbingSystemPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// only spawn touch controls on local player controllers
 	if (SVirtualJoystick::ShouldDisplayTouchInterface() && IsLocalPlayerController())
 	{
-		// spawn the mobile controls widget
 		MobileControlsWidget = CreateWidget<UUserWidget>(this, MobileControlsWidgetClass);
-
 		if (MobileControlsWidget)
 		{
-			// add the controls to the player screen
 			MobileControlsWidget->AddToPlayerScreen(0);
-
-		} else {
-
-			UE_LOG(LogClimbingSystem, Error, TEXT("Could not spawn mobile controls widget."));
-
 		}
-
 	}
 }
 
 void AClimbingSystemPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
-
-	// only add IMCs for local player controllers
+	
 	if (IsLocalPlayerController())
 	{
-		// Add Input Mapping Contexts
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		// [수정됨] DefaultMappingContexts 배열을 순회하며
+		// 헬퍼 함수를 통해 각 컨텍스트를 추가합니다.
+		for (UInputMappingContext* CurrentContext : DefaultMappingContexts)
 		{
-			for (UInputMappingContext* CurrentContext : DefaultMappingContexts)
-			{
-				Subsystem->AddMappingContext(CurrentContext, 0);
-			}
-
-			// only add these IMCs if we're not using mobile touch input
-			if (!SVirtualJoystick::ShouldDisplayTouchInterface())
-			{
-				for (UInputMappingContext* CurrentContext : MobileExcludedMappingContexts)
-				{
-					Subsystem->AddMappingContext(CurrentContext, 0);
-				}
-			}
+			AddInputMappingContext(CurrentContext, 0);
 		}
 	}
+}
+
+void AClimbingSystemPlayerController::AddInputMappingContext(UInputMappingContext* ContextToAdd, int32 InPriority)
+{
+	if (!CheckContextToAdd(ContextToAdd))
+	{
+		return;
+	}
+	
+	if (IsLocalPlayerController())
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(ContextToAdd, InPriority);
+		}
+	}
+}
+
+void AClimbingSystemPlayerController::RemoveInputMappingContext(UInputMappingContext* ContextToAdd)
+{
+	if (!CheckContextToAdd(ContextToAdd))
+	{
+		return;
+	}
+	
+	if (IsLocalPlayerController())
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			Subsystem->RemoveMappingContext(ContextToAdd);
+		}
+	}
+}
+
+bool AClimbingSystemPlayerController::CheckContextToAdd(UInputMappingContext* ContextToAdd)
+{
+	if (!ContextToAdd)
+	{
+		return false;
+	}
+
+	return true;
 }

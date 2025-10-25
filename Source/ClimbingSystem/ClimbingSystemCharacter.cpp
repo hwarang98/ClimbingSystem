@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ClimbingSystemCharacter.h"
+
+#include "ClimbingSystemPlayerController.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -11,6 +13,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "MotionWarpingComponent.h"
+#include "Engine/LocalPlayer.h"
 
 #include "DebugHelper.h"
 
@@ -63,38 +66,29 @@ void AClimbingSystemCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ThisClass::StopJumping);
 
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
-		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::HandleGroundMovementInput);
+		EnhancedInputComponent->BindAction(ClimbMoveAction, ETriggerEvent::Triggered, this, &ThisClass::HandleClimbMovementInput);
+		
 
 		// Looking
+		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
 
 		// Climbing
 		EnhancedInputComponent->BindAction(ClimbAction, ETriggerEvent::Started, this, &ThisClass::OnClimbActionStarted);
+		EnhancedInputComponent->BindAction(ClimbHopAction, ETriggerEvent::Started, this, &ThisClass::OnClimbHopActionStarted);
 	}
 }
 
-void AClimbingSystemCharacter::Move(const FInputActionValue& Value)
+void AClimbingSystemCharacter::BeginPlay()
 {
-	if (!CustomMovementComponent || !GetController())
+	Super::BeginPlay();
+
+	if (CustomMovementComponent)
 	{
-		return;
+		CustomMovementComponent->OnEnterClimbStateDelegate.BindUObject(this, &ThisClass::OnPlayerEnterClimbState);
+		CustomMovementComponent->OnExitClimbStateDelegate.BindUObject(this, &ThisClass::OnPlayerExitClimbState);
 	}
-
-	const FVector2D InputVector = Value.Get<FVector2D>();
-	if (InputVector.IsNearlyZero())
-	{
-		return;
-	}
-
-	// 이동 방향 계산
-	FVector ForwardDirection;
-	FVector RightDirection;
-	HandleMovementDirections(ForwardDirection, RightDirection);
-
-	// 입력 방향에 따라 이동 적용
-	AddMovementInput(ForwardDirection, InputVector.Y);
-	AddMovementInput(RightDirection, InputVector.X);
 }
 
 void AClimbingSystemCharacter::Look(const FInputActionValue& Value)
@@ -123,42 +117,74 @@ void AClimbingSystemCharacter::OnClimbActionStarted(const FInputActionValue& Val
 	}
 }
 
-void AClimbingSystemCharacter::HandleGroundMovementInput(FVector& OutForward, FVector& OutRight) const
+void AClimbingSystemCharacter::OnClimbHopActionStarted(const FInputActionValue& Value)
 {
-	if (Controller)
+	if (CustomMovementComponent)
 	{
-		const FRotator ControlRotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, ControlRotation.Yaw, 0);
-
-		const FRotationMatrix RotationMatrix(YawRotation);
-		OutForward = RotationMatrix.GetUnitAxis(EAxis::X);
-		OutRight   = RotationMatrix.GetUnitAxis(EAxis::Y);
-	}
-	else
-	{
-		OutForward = FVector::ZeroVector;
-		OutRight   = FVector::ZeroVector;
+		CustomMovementComponent->RequestHopping();
 	}
 }
 
-void AClimbingSystemCharacter::HandleClimbMovementInput(FVector& OutForward, FVector& OutRight) const 
+void AClimbingSystemCharacter::OnPlayerEnterClimbState()
 {
-	const FVector SurfaceNormal = -CustomMovementComponent->GetClimbableSurfaceNormal();
-
-	OutForward = FVector::CrossProduct(SurfaceNormal, GetActorRightVector());
-	OutRight = FVector::CrossProduct(SurfaceNormal, -GetActorUpVector());
+	if (AClimbingSystemPlayerController* MyPlayerController = Cast<AClimbingSystemPlayerController>(GetController()))
+	{
+		// 2. 컨트롤러에게 "등반 입력 상태로 전환해"라고 알림
+		MyPlayerController->EnableClimbingInputState();
+	}
 }
 
-void AClimbingSystemCharacter::HandleMovementDirections(FVector& OutForward, FVector& OutRight) const
+void AClimbingSystemCharacter::OnPlayerExitClimbState()
 {
-	if (CustomMovementComponent->IsClimbing())
+	// 1. 현재 캐릭터를 조종하는 플레이어 컨트롤러를 가져옴
+	if (AClimbingSystemPlayerController* MyPlayerController = Cast<AClimbingSystemPlayerController>(GetController()))
 	{
-		HandleClimbMovementInput(OutForward, OutRight);
+		// 2. 컨트롤러에게 "기본 입력 상태로 복원해"라고 알림
+		MyPlayerController->EnableDefaultInputState();
 	}
-	else
+}
+
+void AClimbingSystemCharacter::HandleGroundMovementInput(const FInputActionValue & Value)
+{
+	// input is a Vector2D
+	const FVector2D MovementVector = Value.Get<FVector2D>();
+
+	if (Controller != nullptr)
 	{
-		HandleGroundMovementInput(OutForward, OutRight);
+		// find out which way is forward
+		const FRotator Rotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+		// get forward vector
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	
+		// get right vector 
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		// add movement 
+		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(RightDirection, MovementVector.X);
 	}
+}
+
+void AClimbingSystemCharacter::HandleClimbMovementInput(const FInputActionValue & Value) 
+{
+	// input is a Vector2D
+	const FVector2D MovementVector = Value.Get<FVector2D>();
+
+	const FVector ForwardDirection = FVector::CrossProduct(
+		-CustomMovementComponent->GetClimbableSurfaceNormal(),
+		GetActorRightVector()
+	);
+
+	const FVector RightDirection = FVector::CrossProduct(
+		-CustomMovementComponent->GetClimbableSurfaceNormal(),
+		-GetActorUpVector()
+	);
+
+	// add movement 
+	AddMovementInput(ForwardDirection, MovementVector.Y);
+	AddMovementInput(RightDirection, MovementVector.X);
 }
 
 void AClimbingSystemCharacter::DoLook(float Yaw, float Pitch)

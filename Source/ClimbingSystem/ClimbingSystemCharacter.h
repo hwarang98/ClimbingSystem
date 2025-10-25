@@ -7,6 +7,7 @@
 #include "Logging/LogMacros.h"
 #include "ClimbingSystemCharacter.generated.h"
 
+class UInputMappingContext;
 class UInputAction;
 class UCameraComponent;
 class USpringArmComponent;
@@ -26,13 +27,10 @@ class AClimbingSystemCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-
 	/** Constructor */
 	AClimbingSystemCharacter(const FObjectInitializer& ObjectInitializer);
-	
-	/** Initialize input action bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	void OnClimbActionStarted(const FInputActionValue& Value);
+	virtual void BeginPlay() override;
 
 private:
 	
@@ -51,21 +49,30 @@ private:
 #pragma endregion
 
 #pragma region Inputs
-		
-	UPROPERTY(EditAnywhere, Category="Input")
+
+	void OnPlayerEnterClimbState();
+	void OnPlayerExitClimbState();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> JumpAction;
 	
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> MoveAction;
 	
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> LookAction;
 	
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> MouseLookAction;
 
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> ClimbAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> ClimbMoveAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> ClimbHopAction;
 	
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoLook(float Yaw, float Pitch);
@@ -79,11 +86,11 @@ private:
 
 #pragma region InputCallback
 	
-	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void HandleGroundMovementInput(FVector& OutForward, FVector& OutRight) const;
-	void HandleClimbMovementInput(FVector& OutForward, FVector& OutRight) const;
-	void HandleMovementDirections(FVector& OutForward, FVector& OutRight) const;
+	void HandleGroundMovementInput(const FInputActionValue & Value);
+	void HandleClimbMovementInput(const FInputActionValue & Value);
+	void OnClimbActionStarted(const FInputActionValue& Value);
+	void OnClimbHopActionStarted(const FInputActionValue & Value);
 	
 #pragma endregion 
 
@@ -93,4 +100,3 @@ public:
 	FORCEINLINE UCustomMovementComponent* GetCustomMovementComponent() const { return CustomMovementComponent; }
 	FORCEINLINE UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 };
-

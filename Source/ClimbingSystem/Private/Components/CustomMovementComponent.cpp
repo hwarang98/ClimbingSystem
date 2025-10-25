@@ -7,6 +7,7 @@
 #include "DebugHelper.h"
 #include "MotionWarpingComponent.h"
 #include "AI/NavigationSystemBase.h"
+#include "Chaos/Utilities.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -30,8 +31,6 @@ void UCustomMovementComponent::BeginPlay()
 void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// CanClimbDownLedge();
 }
 
 void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
@@ -40,6 +39,8 @@ void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovem
 	{
 		bOrientRotationToMovement = false;
 		CharacterOwner->GetCapsuleComponent()->SetCapsuleHalfHeight(48.f);
+
+		OnEnterClimbStateDelegate.ExecuteIfBound();
 	}
 
 	if (PreviousMovementMode == MOVE_Custom && PreviousCustomMode == ECustomMovementMode::MOVE_Climb)
@@ -53,6 +54,7 @@ void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovem
 		UpdatedComponent->SetRelativeRotation(CleanStandRotation);
 		
 		StopMovementImmediately();
+		OnExitClimbStateDelegate.ExecuteIfBound();
 	}
 
 	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
@@ -119,6 +121,69 @@ void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
 	{
 		//Stop climbing
 		StopClimbing();
+	}
+}
+
+void UCustomMovementComponent::HandleHopUp()
+{
+	FVector HopUpTargetPoint;
+	if (CheckCanHopUp(HopUpTargetPoint))
+	{
+		SetMotionWarpTarget(HopUpTargetPointName, HopUpTargetPoint);
+		PlayClimbMontage(HopUpMontage);
+	}
+}
+
+bool UCustomMovementComponent::CheckCanHopUp(FVector& OutHopUpTargetPosition)
+{
+	const FHitResult HopUpHit = TraceFromEyeHeight(100.f, -20.f);
+	const FHitResult SafetyLedgeHit = TraceFromEyeHeight(100.f, 150.f);
+
+	if (HopUpHit.bBlockingHit && SafetyLedgeHit.bBlockingHit)
+	{
+		OutHopUpTargetPosition = HopUpHit.ImpactPoint;
+		return true;
+	}
+	return false;
+}
+
+void UCustomMovementComponent::HandleHopDown()
+{
+	FVector HopDownTargetPoint;
+	if (CheckCanHopDown(HopDownTargetPoint))
+	{
+		SetMotionWarpTarget(HopDownTargetPointName, HopDownTargetPoint);
+		PlayClimbMontage(HopDownMontage);
+	}
+}
+
+bool UCustomMovementComponent::CheckCanHopDown(FVector& OutHopDownTargetPosition)
+{
+	const FHitResult HopDownHit = TraceFromEyeHeight(100.f, -300.f);
+
+	if (HopDownHit.bBlockingHit)
+	{
+		OutHopDownTargetPosition = HopDownHit.ImpactPoint;
+		return true;
+	}
+	
+	return false;
+}
+
+void UCustomMovementComponent::RequestHopping()
+{
+	const FVector UnrotatedLastInputVector = UKismetMathLibrary::Quat_UnrotateVector(UpdatedComponent->GetComponentQuat(), GetLastInputVector());
+
+	const float DotResult = FVector::DotProduct(UnrotatedLastInputVector.GetSafeNormal(), FVector::UpVector);
+	
+
+	if (DotResult >= 0.9f)
+	{
+		HandleHopUp();
+	}
+	else if (DotResult <= -0.9f)
+	{
+		HandleHopDown();
 	}
 }
 
@@ -294,7 +359,7 @@ bool UCustomMovementComponent::CanStartVaulting(FVector& OutVaultStartPosition, 
 
 	for (int32 i = 0; i < VaultTraceSteps; ++i)
 	{
-		const FVector StartTrace = ComponentLocation + UpVector * 100.f + ComponentForward * 100.f * (i + 1);
+		const FVector StartTrace = ComponentLocation + UpVector * 100.f + ComponentForward * 80.f * (i + 1);
 		const FVector EndTrace = StartTrace + DownVector * 100.f * (i + 1);
 
 		const FHitResult VaultTraceHit = DoLineTraceSingleByObject(StartTrace, EndTrace, false, false);
@@ -660,7 +725,7 @@ bool UCustomMovementComponent::TraceClimbableSurfaces()
 	return !ClimbableSurfacesTracedResults.IsEmpty();
 }
 
-FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, float TraceStartOffset)
+FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, float TraceStartOffset, bool bInShowDebugShape, bool bInDrawPersistantShapes)
 {
 	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
 	const FVector EyeHeightOffset = UpdatedComponent->GetUpVector() * (CharacterOwner->BaseEyeHeight + TraceStartOffset);
@@ -668,5 +733,5 @@ FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, flo
 	const FVector Start = ComponentLocation + EyeHeightOffset;
 	const FVector End = Start + UpdatedComponent->GetForwardVector() * TraceDistance;
 
-	return DoLineTraceSingleByObject(Start, End, false, false);
+	return DoLineTraceSingleByObject(Start, End, bInShowDebugShape, bInDrawPersistantShapes);
 }
